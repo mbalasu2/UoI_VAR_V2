@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH -n 8
+#SBATCH -C knl,quad,cache
+#SBATCH --job-name=VAR_Test
+#SBATCH --output=./debug/2/stdout.log
+#SBATCH --error=./debug/2/stderr.log 
+#SBATCH -t 00:30:00
+#SBATCH -q debug
+
+module load gsl
+module load eigen3
+module load cray-hdf5-parallel
+module load boost
+
+dir=./debug/2/
+
+exe=./uoi_var
+input=$SCRATCH/var/data_rev.h5
+out_coef=$dir/coef_.h5
+
+OMP_NUM_THREADS=4
+OMP_PROC_BIND=spread
+
+srun -n 8 -c 4 --cpu_bind=threads -u $exe -f $input --dataset_matrix /VAR/data  --output_coef $out_coef --output_scores $out_score -r 1 -v 1
+ 
+
