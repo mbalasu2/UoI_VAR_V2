@@ -190,7 +190,7 @@ VectorXf UoI_VAR(INIT *init)
     MPI_Comm_size(L2_roots_comm, &l2_root_size);
   }
 
-  MPI_Barrier(world_comm);
+  //MPI_Barrier(world_comm);
 
   //Create loader groups in every bootstrap. This to make use of the parallelism, use this
   // until a good strategy is available.
@@ -325,7 +325,7 @@ VectorXf UoI_VAR(INIT *init)
     cout << "Total Selection time: " << sel_time_e << "(s)" << endl;
 
   }
-  if ( (rank == 0)) // && init->debug
+  if ( (rank == 0) && init->debug ) // && init->debug
     print( estimates_selection, "./debug/estimates_selection.txt"); 
 
   //create support matrix storage
@@ -343,7 +343,7 @@ VectorXf UoI_VAR(INIT *init)
 
   estimates_selection.resize(0,0);
 
-  if ( (rank == 0) ) //&& init->debug
+  if ( (rank == 0) && init->debug ) //&& init->debug
     print( supports_, "./debug/supports_.txt");
 
   MPI_Bcast(supports_.data(), init->n_lambdas*p*p, MPI_FLOAT, 0, world_comm);
@@ -427,15 +427,15 @@ VectorXf UoI_VAR(INIT *init)
     MPI_Comm_size(L2_roots_comm_e, &l2_root_size_e);
   }
 
-  MPI_Barrier(world_comm);
+  //MPI_Barrier(world_comm);
 
-  if ( ( rank == 0 ) && init->debug) {cout << "All parameters are set for estimation." << endl;}
+  if ( ( rank == 0 ) && init->verbose) {cout << "All parameters are set for estimation." << endl;}
 
   //#######################
   //### Model Estimation ##
   //#######################
 
-  MPI_Barrier(world_comm);
+  //MPI_Barrier(world_comm);
 
   int size_s = (N-(init->L)+2) * (init->L); 
 
@@ -687,17 +687,17 @@ VectorXf UoI_VAR(INIT *init)
         print_vint(supportids, "./debug/supportids.txt");
       }
 
-      if(rank==0 && bootstraps==0 && lambda_idx == 5)
-          print_vint(supportids, "./debug/supportids_5.txt");
+      //if(rank==0 && bootstraps==0 && lambda_idx == 5)
+      //    print_vint(supportids, "./debug/supportids_5.txt");
 
       //Compute OLS
       if( supportids.size() != 0 ) 
       {
-        if(rank==0 && bootstraps==0 && lambda_idx == 5)
-            cout << "I am inside if-estimation" << endl;    
+        //if(rank==0 && bootstraps==0 && lambda_idx == 5)
+        //    cout << "I am inside if-estimation" << endl;    
         boost::tie(z,lasso_comm) = lasso(X_recon, Y_train, 0.0, init->max_iter, init->reltol, init->abstol, init->rho, comm_me);
 
-        if ( rank == 0 && bootstraps == 0 && lambda_idx==0 ) // && init->debug
+        if ( rank == 0 && bootstraps == 0 && lambda_idx==0 && init->debug ) // && init->debug
           print(z, "./debug/z_est.txt");
 
         for (int i = 0; i<supportids.size(); i++)
@@ -707,7 +707,7 @@ VectorXf UoI_VAR(INIT *init)
        // if( rank == 0 )
        //   cout << " passed est_" << endl;
 
-        if ( rank == 0 && bootstraps == 0 && lambda_idx==0 ) // && init->debug
+        if ( rank == 0 && bootstraps == 0 && lambda_idx==0 && init->debug) // && init->debug
           print(est_, "./debug/est_estimation.txt");
 
         if (rank == 0) 
@@ -782,10 +782,10 @@ VectorXf UoI_VAR(INIT *init)
       }   
     }
 
-    /*if( rank == 0 && bootstraps == 0 ){
+    if( rank == 0 && bootstraps == 0 ){
       print(mspe, "./debug/mspe.txt");
-      print(lasso_estimates, "./debug/lasso_estimates.txt");
-    }*/
+     // print(lasso_estimates, "./debug/lasso_estimates.txt");
+    }
   
     if ( rank == 0 && bootstraps==0 && init->debug ) {
       print(mspe, "./debug/mspe.txt");
@@ -817,6 +817,8 @@ VectorXf UoI_VAR(INIT *init)
       for(int i=0; i<mspemin.size(); i++)
           mspemin_nz(i) = mspemin[i];
         
+      print(mspemin_nz, "./debug/mspenz.txt");
+  
       //float min_coef = mspe.unaryExpr(ptr_fun(not_NaN)).minCoeff( &mspe_min );
       float min_coef = mspemin_nz.minCoeff(&mspe_min);
       int min_id = (int) mspe_min;
@@ -949,19 +951,10 @@ VectorXf UoI_VAR(INIT *init)
 lasso_sweep (float *data_f, int local, int p, VectorXf lambda_, int qrows, int N, int L, int D, int boots_sel, bool debug, int MAX_ITER, float RELTOL, float ABSTOL, float rho, MPI_Comm world_comm, MPI_Comm comm_e, MPI_Comm comm_sweep, MPI_Comm comm_r, int n_readers)
 {
 
-
-  //Get world_comm rank and nprocs
   int rank_world, nprocs_world;
   MPI_Comm_rank(world_comm, &rank_world);
   MPI_Comm_size(world_comm, &nprocs_world);
 
-  //Get group's rank and nprocs
-  int rank_e, nprocs_e;
-  MPI_Comm_rank(comm_e, &rank_e);
-  MPI_Comm_size(comm_e, &nprocs_e);
-
-
-  //Get minigroup's rank and nprocs
   int rank_sweep, nprocs_sweep;
   MPI_Comm_rank(comm_sweep, &rank_sweep);
   MPI_Comm_size(comm_sweep, &nprocs_sweep);
@@ -1007,11 +1000,9 @@ lasso_sweep (float *data_f, int local, int p, VectorXf lambda_, int qrows, int N
   if(MPI_COMM_NULL != comm_r) 
     z_rows = bin_size_1D(rank_r, (bootstrap_subsamples-D)*D, nprocs_r);
 
-  //int y_rows = bin_size_1D(rank_sweep, (bootstrap_subsamples-D), nprocs_sweep); //Remove this line if unnecessary.
-  int y_rows = bin_size_1D(rank_e, (bootstrap_subsamples-D), nprocs_e);
+  int y_rows = bin_size_1D(rank_sweep, (bootstrap_subsamples-D), nprocs_sweep); //Remove this line if unnecessary.
 
-  //int kron_rows = bin_size_1D(rank_sweep, (bootstrap_subsamples-D)*n_features, nprocs_sweep);
-  int kron_rows = bin_size_1D(rank_e, (bootstrap_subsamples-D)*n_features, nprocs_e);
+  int kron_rows = bin_size_1D(rank_sweep, (bootstrap_subsamples-D)*n_features, nprocs_sweep);
 
     //if (rank_sweep == 0 ) cout << "sel qrows: " << qrows << " zrows: " << z_rows << " y_rows: " << y_rows << endl;
 
@@ -1021,7 +1012,7 @@ lasso_sweep (float *data_f, int local, int p, VectorXf lambda_, int qrows, int N
   MatrixXf B_out, Z_mx; 
 
   //MatrixXf scores(boots_sel, n_lambdas);
-  //estimates.setZero();
+  estimates.setZero();
   //scores.setZero();
 
   double time1, time2, time3, time4, time5, time6, time7, time8, lasso_comm, lasso_sel_comm;
@@ -1102,7 +1093,7 @@ lasso_sweep (float *data_f, int local, int p, VectorXf lambda_, int qrows, int N
 
     if (rank_world == 0) {
       time5 = MPI_Wtime();
-      cout << "Before VAR_KRON" << endl; 
+      //cout << "Before VAR_KRON" << endl; 
     }
 
     X = var_kron (Z_stacked, Z_mx.rows(), kron_rows, bootstrap_subsamples, n_features, D, comm_r, world_comm, comm_e, n_readers); 
@@ -1231,19 +1222,9 @@ lasso_sweep (float *data_f, int local, int p, VectorXf lambda_, int qrows, int N
         time2 += MPI_Wtime() - time1;
         lasso_sel_comm += lasso_comm;
       }
-      
-      if(rank_world==0) {
-        cout <<  "before estimates: " << estimates.rows() << " ," << estimates.cols() << endl;
-        cout << "boots_sel: " << boots_sel << endl;
-        cout << "lambda.size:" << n_lambdas << endl;
-
-      }
 
       //estimates.row((bootstrap*n_lambdas)+lambda_idx) = est_; this stores estimates from 0-n_lambdas consecutively 
       estimates.row((lambda_idx*boots_sel) + bootstraps) = est_;
-    
-      if(rank_world==0)
-      cout << "passed estimates" << endl;
     }
   }
   if (MPI_COMM_NULL != comm_r) {
@@ -1266,7 +1247,7 @@ lasso_sweep (float *data_f, int local, int p, VectorXf lambda_, int qrows, int N
     cout << "Total Lasso communication time: " << lasso_sel_comm << "(s)" << endl;
     cout << "\t *Kronecker Product time: " << time6 << "(s)" << endl;
     cout << "\t *Vectorization time: " << time8 << "(s)" << endl;
-    cout << "Total Lasso computation time: " << time2-lasso_sel_comm << "(s)" << endl;
+    cout << "Total Lasso computation time: " << time2 << "(s)" << endl;
   }    
 
   return estimates;   

@@ -58,8 +58,8 @@ MatrixXf var_kron (float* d, int local, int yrows, int n_rows, int n_cols, int D
   MPI_Win win;
   MPI_Win_create(d, sized, sizeof(float), MPI_INFO_NULL, comm_world, &win);
 
-  if(rank_world==0)
-      cout << "passed create" << endl;
+  //if(rank_world==0)
+  //    cout << "passed create" << endl;
 
  int *sample;
    if (rank_group==0) {
@@ -71,8 +71,8 @@ MatrixXf var_kron (float* d, int local, int yrows, int n_rows, int n_cols, int D
   }
 
   
-  if(rank_world==0)
-      cout << "passed create" << endl;
+  //if(rank_world==0)
+  //    cout << "passed create" << endl;
 
   //TODO: Fix the bin_range1D function. It is given out incorrect displs. 
   // The current implementation works fine. Please use this and do not uncomment it.  
@@ -92,8 +92,8 @@ MatrixXf var_kron (float* d, int local, int yrows, int n_rows, int n_cols, int D
   
     MPI_Gather(&yrows, 1, MPI_INT, sendcounts, 1, MPI_INT, 0, comm_group); 
   
-    if(rank_world==0)
-      cout << "passed gather" << endl;
+    //if(rank_world==0)
+    //  cout << "passed gather" << endl;
 
     if(rank_group==0) { 
       displs[0] = 0;
@@ -106,20 +106,15 @@ MatrixXf var_kron (float* d, int local, int yrows, int n_rows, int n_cols, int D
         displs[i] = displs[i-1] + sendcounts[i-1];
     }
 
-    /*if(rank_world==0) {
-      for (i=0; i<size_group; i++) {
-        cout << "sendcnt: " << i << " " << sendcounts[i];
-        cout << "displs: " << i << " " << displs[i];
-      }
-    }*/ 
-
-    if(rank_world==0)
-      cout << "before scatterv" << endl;
+    /*for (i=0; i<size_group; i++) {
+      cout << "sendcnt: " << i << " " << sendcounts[i];
+      cout << "displs: " << i << " " << displs[i];
+    }*/
 
     MPI_Scatterv(sample, sendcounts, displs, MPI_INT, &srows, yrows, MPI_INT, 0, comm_group);
   
-      if(rank_world==0)
-      cout << "passed scatterv" << endl;
+      //if(rank_world==0)
+      //cout << "passed scatterv" << endl;
 
     /*if ( rank_group == 0 )  {
       print_array1(sample, (n_rows-D)*n_cols, "./debug/sample_var.dat"); 
@@ -144,8 +139,8 @@ MatrixXf var_kron (float* d, int local, int yrows, int n_rows, int n_cols, int D
   B_out.setZero();  
   VectorXf get_vector(n_cols);
  
-  if(rank_world==0)
-      cout << "passed before loop" << endl;
+//  if(rank_world==0)
+//      cout << "passed before loop" << endl;
   
   for (i=0; i<yrows; i++) {
     get_vector.setZero();
@@ -171,8 +166,8 @@ MatrixXf var_kron (float* d, int local, int yrows, int n_rows, int n_cols, int D
      B_out(i, j+(n_cols*col_disp)) = get_vector(j);
   }
   
-    if(rank_world==0)
-      cout << "passed after loop" << endl;
+    //if(rank_world==0)
+    //  cout << "passed after loop" << endl;
   /*for(i=0; i<yrows; i++) { 
     if( B_out.row(i).isZero())
       cout << "from var_kron row: " << i << " rank: " << rank_group << endl;
